@@ -5,3 +5,4 @@ pyautogui
 keyboard
 idlelib
 pillow
+py7zr

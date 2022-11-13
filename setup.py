@@ -5,15 +5,18 @@ base = None
 if (platform == "win32"):
     base = "Win32GUI"
 
+with open("requirements.txt", "r", encoding="utf-8") as _:
+    requirements = _.read().splitlines()
+
 executables = [
     Executable(
-        script="src/Youtube Downloader.py",
+        script="src/CyberMonkey.py",
         base=base,
-        icon="src/images/icons/youtube_downloader.ico"
+        icon="src/img/ico/monkey.ico"
     )
 ]
 
-include_files = ["src/images/icons/youtube_downloader.ico"]
+include_files = ["src/img/ico/monkey.ico"]
 packages = ["ctypes", "imp", "PySide6", "yt_dlp", "cx_Freeze", "PyInstaller", "pyperclip", "regex", "adblockparser"]
 excludes = [
     "PyQt5", "PyQt4", "reportlab", "matplotlib", "numba", "scipy", "sqlalchemy", "sqlite3", "soupsieve",
@@ -21,29 +24,27 @@ excludes = [
 ]
 options = {
     'build_exe': {
-        'packages': packages,
+        'packages': requirements,  # Was packages
         'excludes': excludes,
         'include_files': include_files,
     },
 }
 
 package_data = {
-    '3rd': ['*'],
-    'images': ['*', 'icons/*', 'images/*'],
-    'themes': ['*'],
+    'img': ['*', 'ico/*', 'png/*', 'svg/*'],
+    'qss': ['*'],
     'utils': ['*'],
     'widgets': ['*'],
-    'ytb': ['*'],
 }
 
 setup(
-    name="Youtube Downloader",
-    packages=['utils', 'widgets', 'ytb', '3rd', 'images', 'themes'],
+    name="CyberMonkey",
+    install_requires=requirements,
+    packages=['utils', 'widgets', 'img', 'qss'],
     package_dir={'': 'src'},
     package_data=package_data,
     options=options,
-    version="0.0.2",
-    description='Youtube Downloader is a Youtube Browser application based on PySide6 and yt-dlp.'
-                + 'And it allows you to download single videos, playlists or queues.',
+    version="0.0.1",
+    description='GUI for AutoMonkey that allows you to easily create automations',
     executables=executables
 )
