@@ -1,0 +1,1 @@
+call python build_exe.py

@@ -27,14 +27,16 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtWidgets import QLabel
 from PySide6.QtWidgets import QFrame
 
-from PySide6.QtGui import QPainterPath
-from PySide6.QtGui import QRegion
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtGui import QIcon
+from PySide6.QtGui import QDrag
+from PySide6.QtGui import QPixmap
 
 from PySide6.QtCore import Qt
+from PySide6.QtCore import QMimeData
 from PySide6.QtCore import QSize
-from PySide6.QtCore import QRectF
 from PySide6.QtCore import QThreadPool
+from PySide6.QtCore import Signal
 
 from automonkey import ALL_ACTIONS
 from automonkey import chain
@@ -49,7 +51,6 @@ elif splitext(basename(__file__))[1] == '.exe':
 sys.path.append(exe)
 
 from monkeyshot import MonkeyShot
-from utils.thread import Worker
 
 COORDS_REGEX = r"^\d+, *\d+$"
 
@@ -68,6 +69,9 @@ def _clean_steps(steps: dict) -> dict:
     return cleaned
 
 class CyberMonkey(QMainWindow):
+
+    orderChanged = Signal(list)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("CyberMonkey")
@@ -80,12 +84,15 @@ class CyberMonkey(QMainWindow):
         self.steps = {}
         self.steps_json = None
 
+        self.setAcceptDrops(True)
+
         # TODO: Add run automation - In progress - To be fully checked
         # TODO: Possibily add way to move steps up and down - In progress - To be finalized
         # TODO: Add button to browse for image file for target - In progress - See if possible to display only filename, but hold fullpath somewhere
         # TODO: Add button to take screenshot and save to file for target - In progress
         # TODO: Add button to track mouse position and display coords for target - In progress
         # TODO: Add button to track mouse position and get coords when clicked or (ctrl + click)
+        # TODO: We need a way to keep image files together with the json file. Probably a zip file (with password)
 
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()
@@ -187,9 +194,6 @@ class CyberMonkey(QMainWindow):
     def on_run_clicked(self):
         if self.steps is None or len(self.steps) == 0:
             self._make_steps()
-        print(self.steps)  
-        print(_clean_steps(self.steps))
-
         chain(*_clean_steps(self.steps).values(), debug=True)
 
     def _make_steps(self):
@@ -197,6 +201,36 @@ class CyberMonkey(QMainWindow):
             step = self.monkey_layout.itemAt(i).widget()
             if isinstance(step, MonkeyStep):
                 self.steps[i] = step.get_step_info()
+
+    def dragEnterEvent(self, event):
+        event.accept()
+
+    def dropEvent(self, event):
+        pos = event.pos()
+        widget = event.source()
+
+        for num in range(self.monkey_layout.count()):
+            num_widget = self.monkey_layout.itemAt(num).widget()
+
+            if num_widget:
+                drop_here = pos.y() < num_widget.y() + num_widget.size().height() // 2
+            else:
+                drop_here = "last"
+
+            if drop_here:
+                if num > 0:
+                    self.monkey_layout.insertWidget(num - 1, widget)
+                else:
+                    self.monkey_layout.insertWidget(num, widget)
+                break
+            elif drop_here == "last":
+                self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, widget)
+
+        event.accept()
+
+    def add_item(self, item):
+        self.monkey_layout.addWidget(item)
+
 
 class MonkeyHead(QWidget):
     def __init__(self, parent=None):
@@ -290,6 +324,7 @@ class MonkeyHead(QWidget):
         scrn.save("screenshot.png")
         self.monkeyshot = None
 
+
 class MonkeyStep(QWidget):
     def __init__(self):
         super().__init__()
@@ -328,6 +363,7 @@ class MonkeyStep(QWidget):
         self.handle_button = QPushButton()
         self.handle_button.setObjectName("handle_button")
         self.handle_button.setToolTip("Move step")
+        self.handle_button.clicked.connect(self.mouseMoveEvent)
         self.widget.left_layout.addWidget(self.handle_button)
         self.delete_step_button = QPushButton()
         self.delete_step_button.setObjectName("delete_step_button")
@@ -405,13 +441,25 @@ class MonkeyStep(QWidget):
             "monitor": self.monitor.text()
         }
 
+    def mouseMoveEvent(self, e):
+        if isinstance(e, QMouseEvent):
+            if e.buttons() == Qt.LeftButton:
+                drag = QDrag(self)
+                mime = QMimeData()
+                drag.setMimeData(mime)
+
+                pixmap = QPixmap(self.size())
+                self.render(pixmap)
+                drag.setPixmap(pixmap)
+
+                drag.exec(Qt.MoveAction)
 
 if __name__ == "__main__":
     app = QApplication([])
 
     import ctypes
-    myappid = u'mihailcosminmunteanu.monkeybusiness.cybermonkey.001'
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    APP_ID = u'mihailcosminmunteanu.monkeybusiness.cybermonkey.001'
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
 
     app_icon = QIcon()
     app_icon.addFile('src/img/png/monkey_16x16.png', QSize(16, 16))
