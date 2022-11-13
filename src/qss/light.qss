@@ -1,0 +1,69 @@
+#monkey_step QPushButton#handle_button {
+    background: transparent;
+    image: url("./src/img/svg/handle.svg");
+}
+
+#monkey_step QPushButton#handle_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/handle_hover.svg");
+}
+
+#monkey_step QPushButton#delete_step_button {
+    background: transparent;
+    image: url("./src/img/svg/delete_step.svg");
+    height: 30px;
+    width: 30px;
+}
+
+#monkey_step QPushButton#delete_step_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/delete_step_hover.svg");
+    height: 30px;
+    width: 30px;
+}
+
+#monkey_head QPushButton#browse_img_button {
+    background: transparent;
+    image: url("./src/img/svg/browse_img.svg");
+    height: 16px;
+    width: 16px;
+}
+
+#monkey_head QPushButton#browse_img_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/browse_img_hover.svg");
+    height: 16px;
+    width: 16px;
+}
+
+#monkey_head QPushButton#screenshot_button {
+    background: transparent;
+    image: url("./src/img/svg/screenshot.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#screenshot_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/screenshot_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#coordinates_button {
+    background: transparent;
+    image: url("./src/img/svg/coordinates.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#coordinates_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/coordinates_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}

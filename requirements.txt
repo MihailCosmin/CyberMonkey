@@ -1,0 +1,7 @@
+sounddevice
+PySide6
+automonkey
+pyautogui
+keyboard
+idlelib
+pillow
