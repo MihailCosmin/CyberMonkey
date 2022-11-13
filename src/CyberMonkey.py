@@ -1,16 +1,22 @@
 import sys
 from sys import executable
 
+from os import mkdir
+from os import rename
+from os.path import join
+from os.path import isdir
 from os.path import isfile
 from os.path import dirname
+from os.path import normpath
 from os.path import splitext
 from os.path import basename
 from os.path import realpath
 
-from re import search
-
 from json import dump
 from json import load
+
+from shutil import copyfile
+from shutil import rmtree
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtWidgets import QScrollArea
@@ -18,29 +24,19 @@ from PySide6.QtWidgets import QMainWindow
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import QHBoxLayout
 from PySide6.QtWidgets import QVBoxLayout
-from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtWidgets import QFileDialog
-from PySide6.QtWidgets import QSpacerItem
-from PySide6.QtWidgets import QComboBox
-from PySide6.QtWidgets import QLineEdit
 from PySide6.QtWidgets import QWidget
-from PySide6.QtWidgets import QLabel
 from PySide6.QtWidgets import QFrame
 
-from PySide6.QtGui import QMouseEvent
 from PySide6.QtGui import QIcon
-from PySide6.QtGui import QDrag
-from PySide6.QtGui import QPixmap
 
 from PySide6.QtCore import Qt
-from PySide6.QtCore import QMimeData
 from PySide6.QtCore import QSize
-from PySide6.QtCore import QThreadPool
 from PySide6.QtCore import Signal
 
-from automonkey import ALL_ACTIONS
+from py7zr import SevenZipFile
+
 from automonkey import chain
-from automonkey import PositionTracker
 
 exe = ''
 if splitext(basename(__file__))[1] == '.pyw'\
@@ -50,23 +46,8 @@ elif splitext(basename(__file__))[1] == '.exe':
     exe = dirname(executable)
 sys.path.append(exe)
 
-from monkeyshot import MonkeyShot
-
-COORDS_REGEX = r"^\d+, *\d+$"
-
-def _clean_steps(steps: dict) -> dict:
-    """Prepare steps for automonkey chain."""
-    cleaned = {}
-    for key, value in steps.items():
-        if not isfile(value["target"]) and search(COORDS_REGEX, value["target"]):
-            step = {value["action"]: tuple(map(int, value["target"].split(",")))}
-        else:
-            step = {value["action"]: value["target"]}
-        for key2, value2 in value.items():
-            if value2 not in ("", "action", "target"):
-                step[key2] = int(value2) if key != "skip" else eval(value2)
-        cleaned[key] = step
-    return cleaned
+from widgets.step import MonkeyStep
+from utils.common import _clean_steps
 
 class CyberMonkey(QMainWindow):
 
@@ -83,6 +64,7 @@ class CyberMonkey(QMainWindow):
 
         self.steps = {}
         self.steps_json = None
+        self.standalone_export = None
 
         self.setAcceptDrops(True)
 
@@ -102,10 +84,12 @@ class CyberMonkey(QMainWindow):
         self.menu.addAction("Open")
         self.menu.addAction("Save")
         self.menu.addAction("Save As")
+        self.menu.addAction("Export Standalone Steps")
 
         self.menu.actions()[0].triggered.connect(self.on_open_clicked)  # Open
         self.menu.actions()[1].triggered.connect(self.on_save_clicked)  # Save
         self.menu.actions()[2].triggered.connect(self.on_save_as_clicked)  # Save As
+        self.menu.actions()[3].triggered.connect(self.on_export_standalone_clicked)  # Export Standalone Steps
 
         self.menu = self.menuBar().addMenu("Run")
         self.menu.addAction("Run Automation")
@@ -185,10 +169,35 @@ class CyberMonkey(QMainWindow):
         if self.steps_json:
             self.on_save_clicked()
 
-    def on_save_clicked(self):
+    def on_export_standalone_clicked(self):
+        self.standalone_export = normpath(QFileDialog.getSaveFileName(self, "Select File", None, "MonkeySteps (*.monkeysteps)")[0])
+        if self.standalone_export:
+            monkey_path = dirname(self.standalone_export)
+            monkey_name = basename(self.standalone_export).split(".")[0]
+            if not isdir(join(monkey_path, monkey_name)):
+                mkdir(join(monkey_path, monkey_name))
+
+            for target in [target["target"] for target in self.steps.values() if isfile(target["target"])]:
+                copyfile(target, join(monkey_path, monkey_name, basename(target)))
+
+            # TODO: As a standalone the image path should be relative to steps.json
+            self.on_save_clicked(join(monkey_path, monkey_name, "steps.json"))
+
+            with SevenZipFile(self.standalone_export.replace(".monkeysteps", ".7z"), 'w', password='M0nkey_busine$$') as archive:
+                archive.writeall(join(monkey_path, monkey_name))
+
+            rename(self.standalone_export.replace(".monkeysteps", ".7z"), self.standalone_export)
+            if isdir(join(monkey_path, monkey_name)):
+                rmtree(join(monkey_path, monkey_name), ignore_errors=True)
+
+    def on_save_clicked(self, override_json: str = None):
         if self.steps_json:
             self._make_steps()
             with open(self.steps_json, "w", encoding="utf-8") as f:
+                dump(self.steps, f, indent=4)
+        elif override_json:
+            self._make_steps()
+            with open(override_json, "w", encoding="utf-8") as f:
                 dump(self.steps, f, indent=4)
 
     def on_run_clicked(self):
@@ -223,236 +232,13 @@ class CyberMonkey(QMainWindow):
                 else:
                     self.monkey_layout.insertWidget(num, widget)
                 break
-            elif drop_here == "last":
+            if drop_here == "last":
                 self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, widget)
 
         event.accept()
 
     def add_item(self, item):
         self.monkey_layout.addWidget(item)
-
-
-class MonkeyHead(QWidget):
-    def __init__(self, parent=None):
-        super().__init__()
-        self.parent = parent
-        self.setObjectName("monkey_head")
-
-        self.threadpool = QThreadPool()
-        self.worker = None
-
-        self.monkeyshot = None
-
-        self.img_target = None
-
-        self.main_layout = QHBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
-        self.setLayout(self.main_layout)
-
-        self.action = QLabel("Action")
-        self.action.setToolTip("Action to perform.\nEx: click, write, keys, open_app, minimize.\nSee https://github.com/MihailCosmin/AutoMonkey/blob/main/README.md for more info.")
-        self.target = QLabel("Target")
-        self.target.setToolTip("Target to perform action on.\nEx: image, coordintaes, text, app name, filename.")
-        self.wait = QLabel("Wait")
-        self.wait.setToolTip("Time to wait before performing next action.\nEx: 0.1, 0.5, 1, 2, 5.")
-        self.skip = QLabel("Skip")  # Skip
-        self.skip.setToolTip("Skip action if target is not found.\nTrue, False.")
-        self.v_offset = QLabel("V Off")  # Vertical Offset
-        self.v_offset.setToolTip("Vertical Offset in pixels.\nEx: 0, 10, 20, 50, 100.")
-        self.h_offset = QLabel("H Off")  # Horizontal offset
-        self.h_offset.setToolTip("Horizontal Offset in pixels.\nEx: 0, 10, 20, 50, 100.")
-        self.offset = QLabel("Off")  # Offset
-        self.offset.setToolTip("Offset in pixels.\nEx: 0, 10, 20, 50, 100.")
-        self.confidence = QLabel("Conf")  # Confidence
-        self.confidence.setToolTip("Confidence, between 0 and 1.\nEx: 0.1, 0.5, 0.9. Recommended: 0.9")
-        self.monitor = QLabel("Mon")  # Monitor
-        self.monitor.setToolTip("Monitor")
-
-        self.action.setFixedWidth(140)
-        self.target.setFixedWidth(40)
-        self.wait.setFixedWidth(30)
-        self.skip.setFixedWidth(60)
-        self.v_offset.setFixedWidth(30)
-        self.h_offset.setFixedWidth(30)
-        self.offset.setFixedWidth(30)
-        self.confidence.setFixedWidth(30)
-        self.monitor.setFixedWidth(30)
-
-        self.browse_img_button = QPushButton()
-        self.browse_img_button.setObjectName("browse_img_button")
-        self.browse_img_button.setToolTip("Browse for image")
-        self.browse_img_button.clicked.connect(self.browse_img)
-        self.screenshot_button = QPushButton()
-        self.screenshot_button.setObjectName("screenshot_button")
-        self.screenshot_button.setToolTip("Take a screenshot of a button")
-        self.screenshot_button.clicked.connect(self.take_screenshot)
-        self.coordinates_button = QPushButton()
-        self.coordinates_button.setObjectName("coordinates_button")
-        self.coordinates_button.setToolTip("Track mouse coordinates")
-        self.coordinates_button.clicked.connect(PositionTracker)
-
-        self.main_layout.addWidget(self.action)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.target)
-        self.main_layout.addWidget(self.browse_img_button)
-        self.main_layout.addWidget(self.screenshot_button)
-        self.main_layout.addWidget(self.coordinates_button)
-        self.main_layout.addSpacerItem(QSpacerItem(60, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.wait)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.skip)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.v_offset)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.h_offset)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.offset)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.confidence)
-        self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.main_layout.addWidget(self.monitor)
-
-    def browse_img(self):
-        self.img_target = QFileDialog.getOpenFileName(self, "Select Image", "", "Image Files (*.png *.jpg *.bmp)")[0]
-        if self.img_target and isfile(self.img_target):
-            self.parent.target.setText(self.img_target)
-
-    def take_screenshot(self):
-        self.monkeyshot = MonkeyShot()
-        scrn = self.monkeyshot.shoot(mode='dynamic')
-        scrn.save("screenshot.png")
-        self.monkeyshot = None
-
-
-class MonkeyStep(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self.setStyleSheet("border: 0px solid white;")
-        self.setObjectName("monkey_step")
-
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-
-        self.frame = QFrame()
-        self.frame.setStyleSheet("border: 5px solid darkgray; border-radius: 30px;")
-
-        self.layout.addWidget(self.frame)
-
-        self.widget = QWidget()
-        self.frame_layout = QVBoxLayout()
-        self.frame.setLayout(self.frame_layout)
-        self.frame_layout.addWidget(self.widget)
-
-        self.central_layout = QHBoxLayout()
-        self.central_layout.setContentsMargins(0, 0, 0, 0)
-        self.central_layout.setSpacing(0)
-        self.widget.setLayout(self.central_layout)
-
-        self.widget.left_layout = QVBoxLayout()
-        self.widget.left_layout.setContentsMargins(0, 0, 5, 0)
-        self.widget.right_layout = QVBoxLayout()
-        self.widget.right_layout.setContentsMargins(5, 0, 0, 0)
-        self.widget.main_layout = QVBoxLayout()
-
-        self.central_layout.addLayout(self.widget.left_layout)
-        self.central_layout.addLayout(self.widget.main_layout)
-        self.central_layout.addLayout(self.widget.right_layout)
-
-        self.handle_button = QPushButton()
-        self.handle_button.setObjectName("handle_button")
-        self.handle_button.setToolTip("Move step")
-        self.handle_button.clicked.connect(self.mouseMoveEvent)
-        self.widget.left_layout.addWidget(self.handle_button)
-        self.delete_step_button = QPushButton()
-        self.delete_step_button.setObjectName("delete_step_button")
-        self.widget.right_layout.addWidget(self.delete_step_button)
-        self.delete_step_button.setToolTip("Delete step")
-        self.delete_step_button.clicked.connect(self.deleteLater)
-
-        self.widget.setStyleSheet("border: 0px solid gray;")
-
-        self.top_layout = QHBoxLayout()
-        self.top_layout.setContentsMargins(0, 0, 0, 5)
-        self.top_layout.setSpacing(0)
-        self.widget.main_layout.addLayout(self.top_layout)
-
-        self.top_layout.addWidget(MonkeyHead(parent=self))
-
-        self.step_layout = QHBoxLayout()
-        self.step_layout.setContentsMargins(0, 0, 0, 0)
-        self.step_layout.setSpacing(0)
-        self.widget.main_layout.addLayout(self.step_layout)
-
-        self.action = QComboBox()
-        for action in ALL_ACTIONS:
-            self.action.addItem(action)
-
-        self.target = QLineEdit()
-        self.wait = QLineEdit()
-        self.skip = QComboBox()
-        self.skip.addItem("False")
-        self.skip.addItem("True")
-        self.v_offset = QLineEdit()
-        self.h_offset = QLineEdit()
-        self.offset = QLineEdit()
-        self.confidence = QLineEdit()
-        self.monitor = QLineEdit()
-
-        self.action.setFixedWidth(140)
-        self.target.setFixedWidth(160)
-        self.wait.setFixedWidth(30)
-        self.skip.setFixedWidth(60)
-        self.v_offset.setFixedWidth(30)
-        self.h_offset.setFixedWidth(30)
-        self.offset.setFixedWidth(30)
-        self.confidence.setFixedWidth(30)
-        self.monitor.setFixedWidth(30)
-
-        self.step_layout.addWidget(self.action)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.target)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.wait)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.skip)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.v_offset)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.h_offset)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.offset)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.confidence)
-        self.step_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.step_layout.addWidget(self.monitor)
-
-    def get_step_info(self):
-        return {
-            "action": self.action.currentText(),
-            "target": self.target.text(),
-            "wait": self.wait.text(),
-            "skip": self.skip.currentText(),
-            "v_offset": self.v_offset.text(),
-            "h_offset": self.h_offset.text(),
-            "offset": self.offset.text(),
-            "confidence": self.confidence.text(),
-            "monitor": self.monitor.text()
-        }
-
-    def mouseMoveEvent(self, e):
-        if isinstance(e, QMouseEvent):
-            if e.buttons() == Qt.LeftButton:
-                drag = QDrag(self)
-                mime = QMimeData()
-                drag.setMimeData(mime)
-
-                pixmap = QPixmap(self.size())
-                self.render(pixmap)
-                drag.setPixmap(pixmap)
-
-                drag.exec(Qt.MoveAction)
 
 if __name__ == "__main__":
     app = QApplication([])
