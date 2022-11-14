@@ -2,6 +2,8 @@ from os.path import isfile
 
 from re import search
 
+from automonkey import ALL_ACTIONS
+
 from .constants import COORDS_REGEX
 
 def _clean_steps(steps: dict) -> dict:
@@ -13,7 +15,11 @@ def _clean_steps(steps: dict) -> dict:
         else:
             step = {value["action"]: value["target"]}
         for key2, value2 in value.items():
-            if value2 not in ("", "action", "target"):
-                step[key2] = int(value2) if key != "skip" else eval(value2)
+            if key2 not in ("", "skip", "action", "target") + ALL_ACTIONS and value2 not in ("", "action", "target") + ALL_ACTIONS:
+                print(f"key2: {key2}, value2: {value2}")
+                step[key2] = int(value2)
+            elif key2 == "skip":
+                print(f"key2: {key2}, value2: {value2}")
+                step[key2] = eval(value2)
         cleaned[key] = step
     return cleaned

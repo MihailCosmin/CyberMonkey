@@ -70,6 +70,7 @@ class CyberMonkey(QMainWindow):
         # TODO: Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
         # TODO: Add run automation - In progress - To be fully checked
         # TODO: Maybe add multi click get coords and create steps for each click
+        # TODO: Check why PositionTracker shows the tk window again
 
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()
