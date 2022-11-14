@@ -3,7 +3,6 @@ from sys import executable
 
 from os import mkdir
 from os import rename
-from os.path import sep
 from os.path import join
 from os.path import isdir
 from os.path import isfile
@@ -70,6 +69,7 @@ class CyberMonkey(QMainWindow):
 
         # TODO: Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
         # TODO: Add run automation - In progress - To be fully checked
+        # TODO: Maybe add multi click get coords and create steps for each click
 
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()
@@ -77,16 +77,23 @@ class CyberMonkey(QMainWindow):
 
         self.menu = self.menuBar().addMenu("File")
         self.menu.addAction("Open")
+
+        
         self.menu.addAction("Save")
         self.menu.addAction("Save As")
         self.menu.addAction("Export Standalone Steps")
         self.menu.addAction("Import Standalone Steps")
 
         self.menu.actions()[0].triggered.connect(self.on_open_clicked)  # Open
+        self.menu.actions()[0].setShortcut("Ctrl+O")
         self.menu.actions()[1].triggered.connect(self.on_save_clicked)  # Save
+        self.menu.actions()[1].setShortcut("Ctrl+S")
         self.menu.actions()[2].triggered.connect(self.on_save_as_clicked)  # Save As
+        self.menu.actions()[2].setShortcut("Ctrl+Shift+S")
         self.menu.actions()[3].triggered.connect(self.on_export_standalone_clicked)  # Export Standalone Steps
+        self.menu.actions()[3].setShortcut("Ctrl+Shift+E")
         self.menu.actions()[4].triggered.connect(self.on_import_standalone_clicked)  # Import Standalone Steps
+        self.menu.actions()[4].setShortcut("Ctrl+Shift+I")
 
         self.menu = self.menuBar().addMenu("Run")
         self.menu.addAction("Run Automation")
@@ -95,6 +102,7 @@ class CyberMonkey(QMainWindow):
         self.menu.addAction("Record")
 
         self.menu.actions()[0].triggered.connect(self.on_run_clicked)  # Run Automation
+        self.menu.actions()[0].setShortcut("Ctrl+Shift+R")
 
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -146,28 +154,32 @@ class CyberMonkey(QMainWindow):
     def on_open_clicked(self, override_json: str = None):
         if not override_json:
             self.steps_json = QFileDialog.getOpenFileName(self, "Select File", None, "JSON (*.json)")[0]
+            with open(self.steps_json, "r") as f:
+                self.steps = load(f)
         else:
             self.steps_json = override_json
-        with open(self.steps_json, "r") as f:
-            self.steps = load(f)
+            with open(self.steps_json, "r") as f:
+                self.steps = load(f)
+
 
         if override_json:
             for step in self.steps.values():
                 if isfile(join(dirname(self.steps_json), step["target"])):
                     step["target"] = join(dirname(self.steps_json), step["target"])
 
-        self.clear_steps()
-        for step in self.steps.values():
-            self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep())
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().action.setCurrentText(step["action"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().target.setText(step["target"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().wait.setText(step["wait"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().skip.setCurrentText(step["skip"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().v_offset.setText(step["v_offset"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().h_offset.setText(step["h_offset"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().offset.setText(step["offset"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().confidence.setText(step["confidence"])
-            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().monitor.setText(step["monitor"])
+        if self.steps:
+            self.clear_steps()
+            for step in self.steps.values():
+                self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep())
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().action.setCurrentText(step["action"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().target.setText(step["target"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().wait.setText(step["wait"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().skip.setCurrentText(step["skip"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().v_offset.setText(step["v_offset"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().h_offset.setText(step["h_offset"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().offset.setText(step["offset"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().confidence.setText(step["confidence"])
+                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().monitor.setText(step["monitor"])
 
     def on_save_as_clicked(self):
         self.steps_json = QFileDialog.getSaveFileName(self, "Select File", None, "JSON (*.json)")[0]
