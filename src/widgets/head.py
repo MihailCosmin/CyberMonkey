@@ -100,9 +100,13 @@ class MonkeyHead(QWidget):
         self.img_target = QFileDialog.getOpenFileName(self, "Select Image", "", "Image Files (*.png *.jpg *.bmp)")[0]
         if self.img_target and isfile(self.img_target):
             self.parent.target.setText(self.img_target)
+            self.parent.target.setCursorPosition(len(location))
 
     def take_screenshot(self):
         self.monkeyshot = MonkeyShot()
         scrn = self.monkeyshot.shoot(mode='dynamic')
-        scrn.save("screenshot.png")
+        location = QFileDialog.getSaveFileName(self, "Save Screenshot", "", "Image Files (*.png *.jpg *.bmp *.tiff)")[0]
+        scrn.save(location)
+        self.parent.target.setText(location)
+        self.parent.target.setCursorPosition(len(location))
         self.monkeyshot = None

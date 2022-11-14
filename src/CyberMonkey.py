@@ -3,6 +3,7 @@ from sys import executable
 
 from os import mkdir
 from os import rename
+from os.path import sep
 from os.path import join
 from os.path import isdir
 from os.path import isfile
@@ -15,7 +16,7 @@ from os.path import realpath
 from json import dump
 from json import load
 
-from shutil import copyfile
+from shutil import copy
 from shutil import rmtree
 
 from PySide6.QtWidgets import QApplication
@@ -64,17 +65,12 @@ class CyberMonkey(QMainWindow):
 
         self.steps = {}
         self.steps_json = None
-        self.standalone_export = None
 
         self.setAcceptDrops(True)
 
+        # TODO: Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
         # TODO: Add run automation - In progress - To be fully checked
-        # TODO: Possibily add way to move steps up and down - In progress - To be finalized
-        # TODO: Add button to browse for image file for target - In progress - See if possible to display only filename, but hold fullpath somewhere
-        # TODO: Add button to take screenshot and save to file for target - In progress
-        # TODO: Add button to track mouse position and display coords for target - In progress
-        # TODO: Add button to track mouse position and get coords when clicked or (ctrl + click)
-        # TODO: We need a way to keep image files together with the json file. Probably a zip file (with password)
+        # TODO: Add button to track mouse position and get coords when clicked or (ctrl + click) - To be done in AutoMonkey
 
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()
@@ -85,11 +81,13 @@ class CyberMonkey(QMainWindow):
         self.menu.addAction("Save")
         self.menu.addAction("Save As")
         self.menu.addAction("Export Standalone Steps")
+        self.menu.addAction("Import Standalone Steps")
 
         self.menu.actions()[0].triggered.connect(self.on_open_clicked)  # Open
         self.menu.actions()[1].triggered.connect(self.on_save_clicked)  # Save
         self.menu.actions()[2].triggered.connect(self.on_save_as_clicked)  # Save As
         self.menu.actions()[3].triggered.connect(self.on_export_standalone_clicked)  # Export Standalone Steps
+        self.menu.actions()[4].triggered.connect(self.on_import_standalone_clicked)  # Import Standalone Steps
 
         self.menu = self.menuBar().addMenu("Run")
         self.menu.addAction("Run Automation")
@@ -146,10 +144,18 @@ class CyberMonkey(QMainWindow):
             if isinstance(step, MonkeyStep):
                 step.deleteLater()
 
-    def on_open_clicked(self):
-        self.steps_json = QFileDialog.getOpenFileName(self, "Select File", None, "JSON (*.json)")[0]
+    def on_open_clicked(self, override_json: str = None):
+        if not override_json:
+            self.steps_json = QFileDialog.getOpenFileName(self, "Select File", None, "JSON (*.json)")[0]
+        else:
+            self.steps_json = override_json
         with open(self.steps_json, "r") as f:
             self.steps = load(f)
+
+        if override_json:
+            for step in self.steps.values():
+                if isfile(join(dirname(self.steps_json), step["target"])):
+                    step["target"] = join(dirname(self.steps_json), step["target"])
 
         self.clear_steps()
         for step in self.steps.values():
@@ -169,36 +175,71 @@ class CyberMonkey(QMainWindow):
         if self.steps_json:
             self.on_save_clicked()
 
-    def on_export_standalone_clicked(self):
-        self.standalone_export = normpath(QFileDialog.getSaveFileName(self, "Select File", None, "MonkeySteps (*.monkeysteps)")[0])
-        if self.standalone_export:
-            monkey_path = dirname(self.standalone_export)
-            monkey_name = basename(self.standalone_export).split(".")[0]
-            if not isdir(join(monkey_path, monkey_name)):
-                mkdir(join(monkey_path, monkey_name))
-
-            for target in [target["target"] for target in self.steps.values() if isfile(target["target"])]:
-                copyfile(target, join(monkey_path, monkey_name, basename(target)))
-
-            # TODO: As a standalone the image path should be relative to steps.json
-            self.on_save_clicked(join(monkey_path, monkey_name, "steps.json"))
-
-            with SevenZipFile(self.standalone_export.replace(".monkeysteps", ".7z"), 'w', password='M0nkey_busine$$') as archive:
-                archive.writeall(join(monkey_path, monkey_name))
-
-            rename(self.standalone_export.replace(".monkeysteps", ".7z"), self.standalone_export)
-            if isdir(join(monkey_path, monkey_name)):
-                rmtree(join(monkey_path, monkey_name), ignore_errors=True)
-
     def on_save_clicked(self, override_json: str = None):
         if self.steps_json:
-            self._make_steps()
+            if not self.steps:
+                self._make_steps()
             with open(self.steps_json, "w", encoding="utf-8") as f:
                 dump(self.steps, f, indent=4)
         elif override_json:
-            self._make_steps()
+            if not self.steps:
+                self._make_steps()
             with open(override_json, "w", encoding="utf-8") as f:
                 dump(self.steps, f, indent=4)
+        elif not self.steps_json:
+            self.on_save_as_clicked()
+
+    def on_export_standalone_clicked(self):
+        standalone_export = normpath(QFileDialog.getSaveFileName(self, "Select File", None, "MonkeySteps (*.monkeysteps)")[0])
+        if standalone_export:
+            monkey_path = dirname(standalone_export)
+            monkey_name = basename(standalone_export).split(".")[0]
+            if not isdir(join(monkey_path, monkey_name)):
+                mkdir(join(monkey_path, monkey_name))
+
+            if not self.steps:
+                self._make_steps()
+            for target in [target["target"] for target in self.steps.values() if isfile(target["target"])]:
+                copy(target, join(monkey_path, monkey_name, basename(target)))
+
+            _ = {}
+            for key, step in self.steps.items():
+                _[key] = {}
+                for key2, value2 in step.items():
+                    if key2 == "target":
+                        _[key][key2] = basename(value2)
+                    else:
+                        _[key][key2] = value2
+
+            _, self.steps = self.steps, _
+
+            self.on_save_clicked(join(monkey_path, monkey_name, "steps.json"))
+
+            self.steps = _
+            _ = None
+
+            with SevenZipFile(standalone_export.replace(".monkeysteps", ".7z"), 'w', password='M0nkey_busine$$') as archive:
+                archive.writeall(join(monkey_path, monkey_name), ".")
+
+            rename(standalone_export.replace(".monkeysteps", ".7z"), standalone_export)
+            if isdir(join(monkey_path, monkey_name)):
+                rmtree(join(monkey_path, monkey_name), ignore_errors=True)
+
+    def on_import_standalone_clicked(self):
+        standalone_import = normpath(QFileDialog.getOpenFileName(self, "Select File", None, "MonkeySteps (*.monkeysteps)")[0])
+        if standalone_import and isfile(standalone_import):
+            if not isdir(join(exe, "steps")):
+                mkdir(join(exe, "steps"))
+            if not isdir(join(exe, "steps", basename(standalone_import).split(".")[0])):
+                mkdir(join(exe, "steps", basename(standalone_import).split(".")[0]))
+            copy(standalone_import, join(exe, "steps", basename(standalone_import).split(".")[0], basename(standalone_import)))
+
+            seven_zip = join(exe, "steps", basename(standalone_import).split(".")[0], basename(standalone_import)).replace(".monkeysteps", ".7z")
+            rename(join(exe, "steps", basename(standalone_import).split(".")[0], basename(standalone_import)), seven_zip)
+
+            with SevenZipFile(seven_zip, mode='r', password='M0nkey_busine$$') as archive:
+                archive.extractall(path=seven_zip.replace(basename(seven_zip), ""))
+            self.on_open_clicked(seven_zip.replace(basename(seven_zip), "steps.json"))
 
     def on_run_clicked(self):
         if self.steps is None or len(self.steps) == 0:

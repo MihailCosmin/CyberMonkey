@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QHBoxLayout
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtWidgets import QSpacerItem
+from PySide6.QtWidgets import QMessageBox
 from PySide6.QtWidgets import QComboBox
 from PySide6.QtWidgets import QLineEdit
 from PySide6.QtWidgets import QWidget
@@ -79,7 +80,7 @@ class MonkeyStep(QWidget):
         self.delete_step_button.setObjectName("delete_step_button")
         self.widget.right_layout.addWidget(self.delete_step_button)
         self.delete_step_button.setToolTip("Delete step")
-        self.delete_step_button.clicked.connect(self.deleteLater)
+        self.delete_step_button.clicked.connect(self.delete_step)
 
         self.widget.setStyleSheet("border: 0px solid gray;")
 
@@ -100,6 +101,7 @@ class MonkeyStep(QWidget):
             self.action.addItem(action)
 
         self.target = QLineEdit()
+        self.target.setToolTip(self.target.text())
         self.wait = QLineEdit()
         self.skip = QComboBox()
         self.skip.addItem("False")
@@ -150,6 +152,12 @@ class MonkeyStep(QWidget):
             "confidence": self.confidence.text(),
             "monitor": self.monitor.text()
         }
+
+    def delete_step(self):
+        confirmation = QMessageBox.question(self, "Delete step", "Are you sure you want to delete this step?",
+                                            QMessageBox.Yes | QMessageBox.No)
+        if confirmation == QMessageBox.Yes:
+            self.deleteLater()
 
     def mouseMoveEvent(self, e):
         if isinstance(e, QMouseEvent):
