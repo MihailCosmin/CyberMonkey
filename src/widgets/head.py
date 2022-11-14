@@ -74,6 +74,11 @@ class MonkeyHead(QWidget):
         self.coordinates_button.setObjectName("coordinates_button")
         self.coordinates_button.setToolTip("Track mouse coordinates")
         self.coordinates_button.clicked.connect(PositionTracker)
+        self.get_coordinates_button = QPushButton()
+        self.get_coordinates_button.setObjectName("get_coordinates_button")
+        self.get_coordinates_button.setToolTip("Get coordinates from cursor")
+        self.get_coordinates_button.clicked.connect(self.get_coords)
+        
 
         self.main_layout.addWidget(self.action)
         self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -81,7 +86,8 @@ class MonkeyHead(QWidget):
         self.main_layout.addWidget(self.browse_img_button)
         self.main_layout.addWidget(self.screenshot_button)
         self.main_layout.addWidget(self.coordinates_button)
-        self.main_layout.addSpacerItem(QSpacerItem(60, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.main_layout.addWidget(self.get_coordinates_button)
+        self.main_layout.addSpacerItem(QSpacerItem(50, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.main_layout.addWidget(self.wait)
         self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.main_layout.addWidget(self.skip)
@@ -96,11 +102,17 @@ class MonkeyHead(QWidget):
         self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.main_layout.addWidget(self.monitor)
 
+    def get_coords(self):
+        tracker = PositionTracker()
+        coords = tracker.start(get_coords=True)
+        self.parent.target.setText(f"{coords.x}, {coords.y}")
+        self.parent.target.setCursorPosition(len(f"{coords.x}, {coords.y}"))
+
     def browse_img(self):
         self.img_target = QFileDialog.getOpenFileName(self, "Select Image", "", "Image Files (*.png *.jpg *.bmp)")[0]
         if self.img_target and isfile(self.img_target):
             self.parent.target.setText(self.img_target)
-            self.parent.target.setCursorPosition(len(location))
+            self.parent.target.setCursorPosition(len(self.img_target))
 
     def take_screenshot(self):
         self.monkeyshot = MonkeyShot()

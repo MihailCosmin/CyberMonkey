@@ -70,7 +70,6 @@ class CyberMonkey(QMainWindow):
 
         # TODO: Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
         # TODO: Add run automation - In progress - To be fully checked
-        # TODO: Add button to track mouse position and get coords when clicked or (ctrl + click) - To be done in AutoMonkey
 
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()

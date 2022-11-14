@@ -67,3 +67,19 @@
     width: 16px;
     padding-left: 10px;
 }
+
+#monkey_head QPushButton#get_coordinates_button {
+    background: transparent;
+    image: url("./src/img/svg/get_coords.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#get_coordinates_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/get_coords_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
