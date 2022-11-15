@@ -67,6 +67,9 @@ class CyberMonkey(QMainWindow):
 
         self.setAcceptDrops(True)
 
+        # TODO: Far future implement scripting. Option to include python sequences between steps.
+        # TODO: Add Export to python
+        
         # TODO: Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
         # TODO: Add run automation - In progress - To be fully checked
         # TODO: Maybe add multi click get coords and create steps for each click
