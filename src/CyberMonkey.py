@@ -67,13 +67,12 @@ class CyberMonkey(QMainWindow):
 
         self.setAcceptDrops(True)
 
-        # TODO: Far future implement scripting. Option to include python sequences between steps.
-        # TODO: Add Export to python
-        
-        # TODO: Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
-        # TODO: Add run automation - In progress - To be fully checked
-        # TODO: Maybe add multi click get coords and create steps for each click
-        # TODO: Check why PositionTracker shows the tk window again
+        # TODO: 1. Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
+        # TODO: 2. Maybe add multi click get coords and create steps for each click
+        # TODO: 3. Add run automation - In progress - To be fully checked
+        # TODO: 4. Far future implement scripting. Option to include python sequences between steps.
+        # TODO: 5. Add Export to python
+
 
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()
@@ -82,7 +81,6 @@ class CyberMonkey(QMainWindow):
         self.menu = self.menuBar().addMenu("File")
         self.menu.addAction("Open")
 
-        
         self.menu.addAction("Save")
         self.menu.addAction("Save As")
         self.menu.addAction("Export Standalone Steps")
@@ -99,6 +97,12 @@ class CyberMonkey(QMainWindow):
         self.menu.actions()[4].triggered.connect(self.on_import_standalone_clicked)  # Import Standalone Steps
         self.menu.actions()[4].setShortcut("Ctrl+Shift+I")
 
+        self.menu = self.menuBar().addMenu("Edit")
+        self.menu.addAction("Settings")
+
+        # self.menu.actions()[0].triggered.connect()  # Settings
+        self.menu.actions()[0].setShortcut("Ctrl+Shift+S")
+
         self.menu = self.menuBar().addMenu("Run")
         self.menu.addAction("Run Automation")
         self.menu.addAction("Simulate Automation")
@@ -107,6 +111,13 @@ class CyberMonkey(QMainWindow):
 
         self.menu.actions()[0].triggered.connect(self.on_run_clicked)  # Run Automation
         self.menu.actions()[0].setShortcut("Ctrl+Shift+R")
+
+        self.menu = self.menuBar().addMenu("Help")
+        self.menu.addAction("Documentation")
+        self.menu.addAction("About")
+
+        self.menu.actions()[0].setShortcut("Ctrl+F1")
+        self.menu.actions()[1].setShortcut("Ctrl+Shift+A")
 
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -257,11 +268,11 @@ class CyberMonkey(QMainWindow):
             self.on_open_clicked(seven_zip.replace(basename(seven_zip), "steps.json"))
 
     def on_run_clicked(self):
-        if self.steps is None or len(self.steps) == 0:
-            self._make_steps()
+        self._make_steps()
         chain(*_clean_steps(self.steps).values(), debug=True)
 
     def _make_steps(self):
+        self.steps = {}
         for i in range(self.monkey_layout.count()):
             step = self.monkey_layout.itemAt(i).widget()
             if isinstance(step, MonkeyStep):

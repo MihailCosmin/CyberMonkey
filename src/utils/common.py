@@ -16,10 +16,8 @@ def _clean_steps(steps: dict) -> dict:
             step = {value["action"]: value["target"]}
         for key2, value2 in value.items():
             if key2 not in ("", "skip", "action", "target") + ALL_ACTIONS and value2 not in ("", "action", "target") + ALL_ACTIONS:
-                print(f"key2: {key2}, value2: {value2}")
                 step[key2] = int(value2)
             elif key2 == "skip":
-                print(f"key2: {key2}, value2: {value2}")
                 step[key2] = eval(value2)
         cleaned[key] = step
     return cleaned

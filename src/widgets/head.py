@@ -24,8 +24,6 @@ class MonkeyHead(QWidget):
         self.threadpool = QThreadPool()
         self.worker = None
 
-        self.monkeyshot = None
-
         self.img_target = None
 
         self.main_layout = QHBoxLayout()
@@ -73,13 +71,11 @@ class MonkeyHead(QWidget):
         self.coordinates_button = QPushButton()
         self.coordinates_button.setObjectName("coordinates_button")
         self.coordinates_button.setToolTip("Track mouse coordinates")
-        tracker = PositionTracker()
-        self.coordinates_button.clicked.connect(lambda: tracker.start(get_coords=False))
+        self.coordinates_button.clicked.connect(self.track_mouse)
         self.get_coordinates_button = QPushButton()
         self.get_coordinates_button.setObjectName("get_coordinates_button")
         self.get_coordinates_button.setToolTip("Get coordinates from cursor")
         self.get_coordinates_button.clicked.connect(self.get_coords)
-        
 
         self.main_layout.addWidget(self.action)
         self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -88,7 +84,7 @@ class MonkeyHead(QWidget):
         self.main_layout.addWidget(self.screenshot_button)
         self.main_layout.addWidget(self.coordinates_button)
         self.main_layout.addWidget(self.get_coordinates_button)
-        self.main_layout.addSpacerItem(QSpacerItem(50, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.main_layout.addSpacerItem(QSpacerItem(30, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.main_layout.addWidget(self.wait)
         self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.main_layout.addWidget(self.skip)
@@ -103,9 +99,14 @@ class MonkeyHead(QWidget):
         self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.main_layout.addWidget(self.monitor)
 
+    def track_mouse(self):
+        tracker = PositionTracker()
+        tracker.start(get_coords=False)
+
     def get_coords(self):
         tracker = PositionTracker()
         coords = tracker.start(get_coords=True)
+
         self.parent.target.setText(f"{coords.x}, {coords.y}")
         self.parent.target.setCursorPosition(len(f"{coords.x}, {coords.y}"))
 
@@ -116,10 +117,10 @@ class MonkeyHead(QWidget):
             self.parent.target.setCursorPosition(len(self.img_target))
 
     def take_screenshot(self):
-        self.monkeyshot = MonkeyShot()
-        scrn = self.monkeyshot.shoot(mode='dynamic')
+        monkeyshot = MonkeyShot()
+        scrn = monkeyshot.shoot(mode='dynamic')
         location = QFileDialog.getSaveFileName(self, "Save Screenshot", "", "Image Files (*.png *.jpg *.bmp *.tiff)")[0]
         scrn.save(location)
         self.parent.target.setText(location)
         self.parent.target.setCursorPosition(len(location))
-        self.monkeyshot = None
+        monkeyshot = None
