@@ -1,3 +1,4 @@
+from os.path import sep
 from os.path import isfile
 
 from re import search
@@ -21,3 +22,12 @@ def _clean_steps(steps: dict) -> dict:
                 step[key2] = eval(value2)
         cleaned[key] = step
     return cleaned
+
+def clean_path(path: str) -> str:
+    """clean_path by replacing all backslashes with standard os path separator
+    Args:
+        path (str): path to clean
+    Returns:
+        str: cleaned path
+    """
+    return path.replace("\\\\", sep).replace("\\", sep).replace("/", sep)

@@ -6,15 +6,18 @@ from os.path import splitext
 from os.path import basename
 from os.path import realpath
 
+from PySide6.QtWidgets import QDialogButtonBox
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import QHBoxLayout
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtWidgets import QSpacerItem
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QCheckBox
 from PySide6.QtWidgets import QComboBox
 from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QDialog
 from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLabel
 from PySide6.QtWidgets import QFrame
 
 from PySide6.QtGui import QMouseEvent
@@ -37,8 +40,9 @@ elif splitext(basename(__file__))[1] == '.exe':
 sys.path.append(exe)
 
 class MonkeyStep(QWidget):
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
 
         self.setStyleSheet("border: 0px solid white;")
         self.setObjectName("monkey_step")
@@ -163,9 +167,29 @@ class MonkeyStep(QWidget):
     def delete_step(self):
         """delete_step
         """
-        confirmation = QMessageBox.question(self, "Delete step", "Are you sure you want to delete this step?",
-                                            QMessageBox.Yes | QMessageBox.No)
-        if confirmation == QMessageBox.Yes:
+        if self.parent.config["confirm_delete"]:
+            prompt = QDialog()
+            layout = QVBoxLayout()
+            prompt.setLayout(layout)
+            checkbox = QCheckBox("Don't show this again")
+            layout.addWidget(QLabel("Are you sure you want to delete this step?"))
+            layout.addWidget(checkbox)
+
+            buttons = QDialogButtonBox(
+                QDialogButtonBox.Yes | QDialogButtonBox.No,
+                Qt.Horizontal, prompt)
+
+            buttons.accepted.connect(prompt.accept)
+            buttons.rejected.connect(prompt.reject)
+            layout.addWidget(buttons)
+
+            prompt.exec()
+            if checkbox.isChecked():
+                self.parent.update_config("confirm_delete", False)
+
+            if prompt.result() == QDialog.Accepted:
+                self.deleteLater()
+        else:
             self.deleteLater()
 
     def mouseMoveEvent(self, e):

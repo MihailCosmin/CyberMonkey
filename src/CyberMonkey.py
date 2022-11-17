@@ -64,10 +64,12 @@ class CyberMonkey(QMainWindow):
 
         self.steps = {}
         self.steps_json = None
+        self.config = {}
+        self._init_config()
 
         self.setAcceptDrops(True)
 
-        # TODO: 1. Implement config - For ex: ask confirmation for delete step should have a checkbox, don't ask again. This should be saved in a config file
+        # TODO: 1. Implement config - Add edit settings window
         # TODO: 2. Maybe add multi click get coords and create steps for each click
         # TODO: 3. Add run automation - In progress - To be fully checked
         # TODO: 4. Far future implement scripting. Option to include python sequences between steps.
@@ -103,7 +105,7 @@ class CyberMonkey(QMainWindow):
 
         self.monkey_layout = QVBoxLayout(self.monkey)
 
-        self.monkey_layout.addWidget(MonkeyStep())
+        self.monkey_layout.addWidget(MonkeyStep(parent=self))
 
         self.add_step = QPushButton("Add Step")
         self.add_step.setMaximumWidth(100)
@@ -115,6 +117,26 @@ class CyberMonkey(QMainWindow):
         self.monkey_layout.addLayout(self.add_step_layout)
 
         self.monkey_layout.addStretch(1)
+
+    def _init_config(self):
+        if not isfile("src/config/config.json"):
+            self.config = {
+                "confirm_delete": True,
+                "theme": "Light",
+                "accent": "Red",
+            }
+            if not isdir("src/config"):
+                mkdir("src/config")
+            with open("src/config/config.json", "w", encoding="utf-8") as _:
+                dump(self.config, _, indent=4)
+        else:
+            with open("src/config/config.json", "r", encoding="utf-8") as _:
+                self.config = load(_)
+
+    def update_config(self, key: str, value):
+        self.config[key] = value
+        with open("src/config/config.json", "w", encoding="utf-8") as _:
+            dump(self.config, _, indent=4)
 
     def _make_menu(self):
         self.menu = self.menuBar().addMenu("File")
@@ -160,7 +182,7 @@ class CyberMonkey(QMainWindow):
 
     def add_step_clicked(self):
         # add a step before the add step button
-        self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep())
+        self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep(parent=self))
 
     def clear_steps(self):
         for i in range(self.monkey_layout.count()):
@@ -186,7 +208,7 @@ class CyberMonkey(QMainWindow):
         if self.steps:
             self.clear_steps()
             for step in self.steps.values():
-                self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep())
+                self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep(parent=self))
                 self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().action.setCurrentText(step["action"])
                 self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().target.setText(step["target"])
                 self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().wait.setText(step["wait"])
