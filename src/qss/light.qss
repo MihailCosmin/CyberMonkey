@@ -83,3 +83,51 @@
     width: 16px;
     padding-left: 10px;
 }
+
+#monkey_head QPushButton#mouse_actions_button {
+    background: transparent;
+    image: url("./src/img/svg/mouse.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#mouse_actions_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/mouse_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#keyboard_actions_button {
+    background: transparent;
+    image: url("./src/img/svg/keyboard.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#keyboard_actions_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/keyboard_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#app_actions_button {
+    background: transparent;
+    image: url("./src/img/svg/app.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+#monkey_head QPushButton#app_actions_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/app_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}

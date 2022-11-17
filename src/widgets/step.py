@@ -95,7 +95,9 @@ class MonkeyStep(QWidget):
         self.step_layout.setContentsMargins(0, 0, 0, 0)
         self.step_layout.setSpacing(0)
         self.widget.main_layout.addLayout(self.step_layout)
+        self._make_step()
 
+    def _make_step(self):
         self.action = QComboBox()
         for action in ALL_ACTIONS:
             self.action.addItem(action)
@@ -141,6 +143,11 @@ class MonkeyStep(QWidget):
         self.step_layout.addWidget(self.monitor)
 
     def get_step_info(self):
+        """get_step_info
+
+        Returns:
+            dict: dictinary with step info
+        """
         return {
             "action": self.action.currentText(),
             "target": self.target.text(),
@@ -154,6 +161,8 @@ class MonkeyStep(QWidget):
         }
 
     def delete_step(self):
+        """delete_step
+        """
         confirmation = QMessageBox.question(self, "Delete step", "Are you sure you want to delete this step?",
                                             QMessageBox.Yes | QMessageBox.No)
         if confirmation == QMessageBox.Yes:

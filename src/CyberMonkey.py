@@ -73,11 +73,50 @@ class CyberMonkey(QMainWindow):
         # TODO: 4. Far future implement scripting. Option to include python sequences between steps.
         # TODO: 5. Add Export to python
 
-
         with open("src/qss/light.qss", "r", encoding="utf-8") as _:
             stylesheet = _.read()
         self.setStyleSheet(stylesheet)
 
+        self._make_menu()
+
+        self.main_layout = QVBoxLayout()
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+
+        self.central_widget = QWidget()
+        self.central_widget.setLayout(self.main_layout)
+        self.setCentralWidget(self.central_widget)
+
+        self.monkey = QWidget()
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.monkey)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(
+            lambda min, max: self.scroll_area.verticalScrollBar().setValue(max)
+        )
+
+        self.main_layout.addWidget(self.scroll_area)
+
+        self.monkey_layout = QVBoxLayout(self.monkey)
+
+        self.monkey_layout.addWidget(MonkeyStep())
+
+        self.add_step = QPushButton("Add Step")
+        self.add_step.setMaximumWidth(100)
+        self.add_step_layout = QHBoxLayout()
+        self.add_step_layout.addStretch()
+        self.add_step_layout.addWidget(self.add_step)
+        self.add_step_layout.addStretch()
+        self.add_step.clicked.connect(self.add_step_clicked)
+        self.monkey_layout.addLayout(self.add_step_layout)
+
+        self.monkey_layout.addStretch(1)
+
+    def _make_menu(self):
         self.menu = self.menuBar().addMenu("File")
         self.menu.addAction("Open")
 
@@ -119,43 +158,6 @@ class CyberMonkey(QMainWindow):
         self.menu.actions()[0].setShortcut("Ctrl+F1")
         self.menu.actions()[1].setShortcut("Ctrl+Shift+A")
 
-        self.main_layout = QVBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
-
-        self.central_widget = QWidget()
-        self.central_widget.setLayout(self.main_layout)
-        self.setCentralWidget(self.central_widget)
-
-        self.monkey = QWidget()
-
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setWidget(self.monkey)
-        self.scroll_area.setFrameShape(QFrame.NoFrame)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(
-            lambda min, max: self.scroll_area.verticalScrollBar().setValue(max)
-        )
-
-        self.main_layout.addWidget(self.scroll_area)
-
-        self.monkey_layout = QVBoxLayout(self.monkey)
-
-        self.monkey_layout.addWidget(MonkeyStep())
-
-        self.add_step = QPushButton("Add Step")
-        self.add_step.setMaximumWidth(100)
-        self.add_step_layout = QHBoxLayout()
-        self.add_step_layout.addStretch()
-        self.add_step_layout.addWidget(self.add_step)
-        self.add_step_layout.addStretch()
-        self.add_step.clicked.connect(self.add_step_clicked)
-        self.monkey_layout.addLayout(self.add_step_layout)
-
-        self.monkey_layout.addStretch(1)
-
     def add_step_clicked(self):
         # add a step before the add step button
         self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep())
@@ -175,7 +177,6 @@ class CyberMonkey(QMainWindow):
             self.steps_json = override_json
             with open(self.steps_json, "r") as f:
                 self.steps = load(f)
-
 
         if override_json:
             for step in self.steps.values():
@@ -228,21 +229,7 @@ class CyberMonkey(QMainWindow):
             for target in [target["target"] for target in self.steps.values() if isfile(target["target"])]:
                 copy(target, join(monkey_path, monkey_name, basename(target)))
 
-            _ = {}
-            for key, step in self.steps.items():
-                _[key] = {}
-                for key2, value2 in step.items():
-                    if key2 == "target":
-                        _[key][key2] = basename(value2)
-                    else:
-                        _[key][key2] = value2
-
-            _, self.steps = self.steps, _
-
-            self.on_save_clicked(join(monkey_path, monkey_name, "steps.json"))
-
-            self.steps = _
-            _ = None
+            self._prepare_step_for_export(monkey_path, monkey_name)
 
             with SevenZipFile(standalone_export.replace(".monkeysteps", ".7z"), 'w', password='M0nkey_busine$$') as archive:
                 archive.writeall(join(monkey_path, monkey_name), ".")
@@ -250,6 +237,23 @@ class CyberMonkey(QMainWindow):
             rename(standalone_export.replace(".monkeysteps", ".7z"), standalone_export)
             if isdir(join(monkey_path, monkey_name)):
                 rmtree(join(monkey_path, monkey_name), ignore_errors=True)
+
+    def _prepare_step_for_export(self, monkey_path, monkey_name):
+        _ = {}
+        for key, step in self.steps.items():
+            _[key] = {}
+            for key2, value2 in step.items():
+                if key2 == "target":
+                    _[key][key2] = basename(value2)
+                else:
+                    _[key][key2] = value2
+
+        _, self.steps = self.steps, _
+
+        self.on_save_clicked(join(monkey_path, monkey_name, "steps.json"))
+
+        self.steps = _
+        _ = None
 
     def on_import_standalone_clicked(self):
         standalone_import = normpath(QFileDialog.getOpenFileName(self, "Select File", None, "MonkeySteps (*.monkeysteps)")[0])
