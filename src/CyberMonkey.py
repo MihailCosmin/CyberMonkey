@@ -24,8 +24,12 @@ from PySide6.QtWidgets import QMainWindow
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import QHBoxLayout
 from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QSpacerItem
 from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QComboBox
 from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLabel
 from PySide6.QtWidgets import QFrame
 
 from PySide6.QtGui import QIcon
@@ -81,6 +85,8 @@ class CyberMonkey(QMainWindow):
 
         self._make_menu()
 
+        self.back_button = QPushButton()
+
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
@@ -107,6 +113,13 @@ class CyberMonkey(QMainWindow):
 
         self.monkey_layout.addWidget(MonkeyStep(parent=self))
 
+        self._add_add_button()
+
+        self.bottom_spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.monkey_layout.addSpacerItem(self.bottom_spacer)
+
+
+    def _add_add_button(self):
         self.add_step = QPushButton("Add Step")
         self.add_step.setMaximumWidth(100)
         self.add_step_layout = QHBoxLayout()
@@ -116,14 +129,12 @@ class CyberMonkey(QMainWindow):
         self.add_step.clicked.connect(self.add_step_clicked)
         self.monkey_layout.addLayout(self.add_step_layout)
 
-        self.monkey_layout.addStretch(1)
-
     def _init_config(self):
         if not isfile("src/config/config.json"):
             self.config = {
-                "confirm_delete": True,
-                "theme": "Light",
-                "accent": "Red",
+                "confirm_delete": [True, "combobox", ["True", "False"]],  # (Value, Type, List of options)
+                "theme": ["Light", "combobox", ["Light", "Dark"]],
+                "accent": ["Red", "combobox", ["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink"]],
             }
             if not isdir("src/config"):
                 mkdir("src/config")
@@ -134,7 +145,7 @@ class CyberMonkey(QMainWindow):
                 self.config = load(_)
 
     def update_config(self, key: str, value):
-        self.config[key] = value
+        self.config[key] = (value, self.config[key][1])
         with open("src/config/config.json", "w", encoding="utf-8") as _:
             dump(self.config, _, indent=4)
 
@@ -161,7 +172,7 @@ class CyberMonkey(QMainWindow):
         self.menu = self.menuBar().addMenu("Edit")
         self.menu.addAction("Settings")
 
-        # self.menu.actions()[0].triggered.connect()  # Settings
+        self.menu.actions()[0].triggered.connect(self._settings)  # Settings
         self.menu.actions()[0].setShortcut("Ctrl+Shift+S")
 
         self.menu = self.menuBar().addMenu("Run")
@@ -181,14 +192,23 @@ class CyberMonkey(QMainWindow):
         self.menu.actions()[1].setShortcut("Ctrl+Shift+A")
 
     def add_step_clicked(self):
-        # add a step before the add step button
         self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep(parent=self))
 
-    def clear_steps(self):
+    def clear_steps(self, full: bool = False):
         for i in range(self.monkey_layout.count()):
             step = self.monkey_layout.itemAt(i).widget()
-            if isinstance(step, MonkeyStep):
+
+            if step is not None and full:
                 step.deleteLater()
+            elif isinstance(step, MonkeyStep):
+                step.deleteLater()
+
+        if self.add_step in [self.add_step_layout.itemAt(i).widget() for i in range(self.add_step_layout.count())]:
+            self.add_step.deleteLater()
+
+        self.monkey_layout.removeItem(self.add_step_layout)
+
+        self.monkey_layout.removeItem(self.bottom_spacer)
 
     def on_open_clicked(self, override_json: str = None):
         if not override_json:
@@ -207,17 +227,20 @@ class CyberMonkey(QMainWindow):
 
         if self.steps:
             self.clear_steps()
-            for step in self.steps.values():
-                self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep(parent=self))
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().action.setCurrentText(step["action"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().target.setText(step["target"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().wait.setText(step["wait"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().skip.setCurrentText(step["skip"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().v_offset.setText(step["v_offset"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().h_offset.setText(step["h_offset"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().offset.setText(step["offset"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().confidence.setText(step["confidence"])
-                self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().monitor.setText(step["monitor"])
+            self.load_steps()
+
+    def load_steps(self):
+        for step in self.steps.values():
+            self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep(parent=self))
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().action.setCurrentText(step["action"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().target.setText(step["target"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().wait.setText(step["wait"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().skip.setCurrentText(step["skip"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().v_offset.setText(step["v_offset"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().h_offset.setText(step["h_offset"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().offset.setText(step["offset"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().confidence.setText(step["confidence"])
+            self.monkey_layout.itemAt(self.monkey_layout.count() - 3).widget().monitor.setText(step["monitor"])
 
     def on_save_as_clicked(self):
         self.steps_json = QFileDialog.getSaveFileName(self, "Select File", None, "JSON (*.json)")[0]
@@ -332,6 +355,38 @@ class CyberMonkey(QMainWindow):
 
     def add_item(self, item):
         self.monkey_layout.addWidget(item)
+
+    def _settings(self):
+        self._make_steps()
+        self.clear_steps(True)
+
+        self.back_button = QPushButton()
+        self.back_button.setObjectName("back_button")
+        self.back_button.setToolTip("Toggle Keyboard Actions Only")
+        self.back_button.clicked.connect(self._exit_settings)
+        self.monkey_layout.addWidget(self.back_button)
+
+        for setting, (value, tip, options) in self.config.items():
+            label = QLabel(setting)
+            self.monkey_layout.addWidget(label)
+            if tip == "combobox":
+                combobox = QComboBox()
+                combobox.addItems(options)
+                self.monkey_layout.addWidget(combobox)
+                combobox.setCurrentText(str(value))
+
+        self.bottom_spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.monkey_layout.addSpacerItem(self.bottom_spacer)
+
+    def _exit_settings(self):
+        self.clear_steps(True)
+        self.back_button.hide()
+        self.load_steps()
+
+        self._add_add_button()
+
+        self.bottom_spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.monkey_layout.addSpacerItem(self.bottom_spacer)
 
 if __name__ == "__main__":
     app = QApplication([])

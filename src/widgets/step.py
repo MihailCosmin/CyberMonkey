@@ -167,7 +167,7 @@ class MonkeyStep(QWidget):
     def delete_step(self):
         """delete_step
         """
-        if self.parent.config["confirm_delete"]:
+        if self.parent.config["confirm_delete"][0]:
             prompt = QDialog()
             layout = QVBoxLayout()
             prompt.setLayout(layout)
@@ -185,7 +185,7 @@ class MonkeyStep(QWidget):
 
             prompt.exec()
             if checkbox.isChecked():
-                self.parent.update_config("confirm_delete", False)
+                self.parent.update_config("confirm_delete", (False, self.parent.config["confirm_delete"][1]))
 
             if prompt.result() == QDialog.Accepted:
                 self.deleteLater()

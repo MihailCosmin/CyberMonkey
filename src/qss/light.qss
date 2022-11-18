@@ -131,3 +131,19 @@
     width: 16px;
     padding-left: 10px;
 }
+
+QPushButton#back_button {
+    background: transparent;
+    image: url("./src/img/svg/back.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
+
+QPushButton#back_button:hover {
+    background: transparent;
+    image: url("./src/img/svg/back_hover.svg");
+    height: 16px;
+    width: 16px;
+    padding-left: 10px;
+}
