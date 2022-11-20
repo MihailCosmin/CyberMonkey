@@ -3,11 +3,16 @@ from os.path import isfile
 
 from re import search
 
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QPushButton
+
 from automonkey import ALL_ACTIONS
 
 from .constants import COORDS_REGEX
 
-def _clean_steps(steps: dict) -> dict:
+def clean_steps(steps: dict) -> dict:
     """Prepare steps for automonkey chain."""
     cleaned = {}
     for key, value in steps.items():
@@ -31,3 +36,27 @@ def clean_path(path: str) -> str:
         str: cleaned path
     """
     return path.replace("\\\\", sep).replace("\\", sep).replace("/", sep)
+
+def filter_settings(layout: any, exception_widget: any, search_bar: any):
+    for i in range(layout.count()):
+        if isinstance(layout.itemAt(i).widget(), exception_widget):
+            if isinstance(layout.itemAt(i).widget().setting_widget, QLineEdit):
+                if search_bar.text().lower() in layout.itemAt(i).widget().setting_widget.objectName().lower():
+                    layout.itemAt(i).widget().show()
+                elif layout.itemAt(i).widget().setting_widget != search_bar:
+                    layout.itemAt(i).widget().hide()
+            if isinstance(layout.itemAt(i).widget().setting_widget, QComboBox):
+                if search_bar.text().lower() in layout.itemAt(i).widget().setting_widget.objectName().lower():
+                    layout.itemAt(i).widget().show()
+                elif layout.itemAt(i).widget().setting_widget != search_bar:
+                    layout.itemAt(i).widget().hide()
+            if isinstance(layout.itemAt(i).widget().setting_label, QLabel):
+                if search_bar.text().lower() in layout.itemAt(i).widget().setting_label.objectName().lower():
+                    layout.itemAt(i).widget().show()
+                elif layout.itemAt(i).widget().setting_label != search_bar:
+                    layout.itemAt(i).widget().hide()
+            if isinstance(layout.itemAt(i).widget().setting_widget, QPushButton):
+                if search_bar.text().lower() in layout.itemAt(i).widget().setting_widget.objectName().lower():
+                    layout.itemAt(i).widget().show()
+                elif layout.itemAt(i).widget().setting_widget != search_bar:
+                    layout.itemAt(i).widget().hide()

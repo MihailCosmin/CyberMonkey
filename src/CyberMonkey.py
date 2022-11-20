@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtWidgets import QSpacerItem
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import QSizePolicy
-from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QLineEdit
 from PySide6.QtWidgets import QWidget
 from PySide6.QtWidgets import QLabel
 from PySide6.QtWidgets import QFrame
@@ -51,7 +51,10 @@ elif splitext(basename(__file__))[1] == '.exe':
 sys.path.append(exe)
 
 from widgets.step import MonkeyStep
-from utils.common import _clean_steps
+from utils.common import clean_steps
+from utils.common import filter_settings
+from widgets.settings import SettingWidget
+from widgets.repeat import RepeatBlockStart
 
 class CyberMonkey(QMainWindow):
 
@@ -73,7 +76,7 @@ class CyberMonkey(QMainWindow):
 
         self.setAcceptDrops(True)
 
-        # TODO: 1. Implement config - Add edit settings window
+        # TODO: 1. Add repeat steps
         # TODO: 2. Maybe add multi click get coords and create steps for each click
         # TODO: 3. Add run automation - In progress - To be fully checked
         # TODO: 4. Far future implement scripting. Option to include python sequences between steps.
@@ -118,15 +121,31 @@ class CyberMonkey(QMainWindow):
         self.bottom_spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.monkey_layout.addSpacerItem(self.bottom_spacer)
 
-
     def _add_add_button(self):
-        self.add_step = QPushButton("Add Step")
+        self.add_step = QPushButton()
+        self.add_repeat_start = QPushButton()
+        self.add_repeat_end = QPushButton()
+
+        self.add_step.setObjectName("add_step")
+        self.add_repeat_start.setObjectName("add_repeat_start")
+        self.add_repeat_end.setObjectName("add_repeat_end")
+
+        self.add_step.setToolTip("Add step")
+        self.add_repeat_start.setToolTip("Add Repeat Block Start")
+        self.add_repeat_end.setToolTip("Add Repeat Block End")
+
         self.add_step.setMaximumWidth(100)
         self.add_step_layout = QHBoxLayout()
+
         self.add_step_layout.addStretch()
         self.add_step_layout.addWidget(self.add_step)
+        self.add_step_layout.addWidget(self.add_repeat_start)
+        self.add_step_layout.addWidget(self.add_repeat_end)
         self.add_step_layout.addStretch()
+
         self.add_step.clicked.connect(self.add_step_clicked)
+        self.add_repeat_start.clicked.connect(self.add_repeat_block_start)
+        self.add_repeat_end.clicked.connect(self.add_repeat_block_end)
         self.monkey_layout.addLayout(self.add_step_layout)
 
     def _init_config(self):
@@ -193,6 +212,12 @@ class CyberMonkey(QMainWindow):
 
     def add_step_clicked(self):
         self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, MonkeyStep(parent=self))
+
+    def add_repeat_block_start(self):
+        self.monkey_layout.insertWidget(self.monkey_layout.count() - 2, RepeatBlockStart(parent=self))
+
+    def add_repeat_block_end(self):
+        pass
 
     def clear_steps(self, full: bool = False):
         for i in range(self.monkey_layout.count()):
@@ -318,7 +343,7 @@ class CyberMonkey(QMainWindow):
 
     def on_run_clicked(self):
         self._make_steps()
-        chain(*_clean_steps(self.steps).values(), debug=True)
+        chain(*clean_steps(self.steps).values(), debug=True)
 
     def _make_steps(self):
         self.steps = {}
@@ -366,14 +391,15 @@ class CyberMonkey(QMainWindow):
         self.back_button.clicked.connect(self._exit_settings)
         self.monkey_layout.addWidget(self.back_button)
 
+        self.search_bar = QLineEdit()
+        self.search_bar.setMinimumWidth(200)
+        self.search_bar.setPlaceholderText("Filter settings...")
+        self.search_bar.textChanged.connect(lambda: filter_settings(self.monkey_layout, SettingWidget, self.search_bar))
+        self.monkey_layout.addWidget(self.search_bar)
+
         for setting, (value, tip, options) in self.config.items():
-            label = QLabel(setting)
-            self.monkey_layout.addWidget(label)
-            if tip == "combobox":
-                combobox = QComboBox()
-                combobox.addItems(options)
-                self.monkey_layout.addWidget(combobox)
-                combobox.setCurrentText(str(value))
+            setting = SettingWidget(parent=self, setting=setting, value=value, tip=tip, options=options)
+            self.monkey_layout.addWidget(setting)
 
         self.bottom_spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.monkey_layout.addSpacerItem(self.bottom_spacer)

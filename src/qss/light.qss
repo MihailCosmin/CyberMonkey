@@ -147,3 +147,51 @@ QPushButton#back_button:hover {
     width: 16px;
     padding-left: 10px;
 }
+
+QPushButton#add_step {
+    background: transparent;
+    image: url("./src/img/svg/add_step.svg");
+    height: 20px;
+    width: 20px;
+    padding-left: 10px;
+}
+
+QPushButton#add_step:hover {
+    background: transparent;
+    image: url("./src/img/svg/add_step_hover.svg");
+    height: 20px;
+    width: 20px;
+    padding-left: 10px;
+}
+
+QPushButton#add_repeat_start {
+    background: transparent;
+    image: url("./src/img/svg/repeat_start.svg");
+    height: 20px;
+    width: 20px;
+    padding-left: 10px;
+}
+
+QPushButton#add_repeat_start:hover {
+    background: transparent;
+    image: url("./src/img/svg/repeat_start_hover.svg");
+    height: 20px;
+    width: 20px;
+    padding-left: 10px;
+}
+
+QPushButton#add_repeat_end {
+    background: transparent;
+    image: url("./src/img/svg/repeat_end.svg");
+    height: 20px;
+    width: 20px;
+    padding-left: 10px;
+}
+
+QPushButton#add_repeat_end:hover {
+    background: transparent;
+    image: url("./src/img/svg/repeat_end_hover.svg");
+    height: 20px;
+    width: 20px;
+    padding-left: 10px;
+}

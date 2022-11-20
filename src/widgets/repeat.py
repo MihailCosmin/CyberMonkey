@@ -39,13 +39,16 @@ elif splitext(basename(__file__))[1] == '.exe':
     exe = dirname(executable)
 sys.path.append(exe)
 
-class MonkeyStep(QWidget):
+class RepeatBlockStart(QWidget):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
+        
+        # TODO: qss not working for this widget
+        # TODO: check why the frame is square... anyway that looks better
 
         self.setStyleSheet("border: 0px solid white;")
-        self.setObjectName("monkey_step")
+        self.setObjectName("repeat_block_start")
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -93,7 +96,7 @@ class MonkeyStep(QWidget):
         self.top_layout.setSpacing(0)
         self.widget.main_layout.addLayout(self.top_layout)
 
-        self.top_layout.addWidget(MonkeyHead(parent=self))
+        # self.top_layout.addWidget(MonkeyHead(parent=self))
 
         self.step_layout = QHBoxLayout()
         self.step_layout.setContentsMargins(0, 0, 0, 0)
